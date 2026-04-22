@@ -1,144 +1,187 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const HorizonApp());
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class HorizonApp extends StatelessWidget {
+  const HorizonApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Counter App',
+      title: 'Horizon Professional',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorSchemeSeed: Colors.indigo,
+        scaffoldBackgroundColor: Colors.grey.shade100,
       ),
-      home: const HomePage(),
+      home: const GalleryPage(),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class GalleryPage extends StatefulWidget {
+  const GalleryPage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<GalleryPage> createState() => _GalleryPageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  int count = 0;
-  File? imageFile;
+class _GalleryPageState extends State<GalleryPage> {
   final ImagePicker picker = ImagePicker();
+  List<File> images = [];
 
-  Future<void> pickImage(ImageSource source) async {
-    final XFile? pickedFile =
-        await picker.pickImage(source: source);
+  @override
+  void initState() {
+    super.initState();
+    loadImages();
+  }
 
-    if (pickedFile != null) {
-      setState(() {
-        imageFile = File(pickedFile.path);
-      });
+  Future<Directory> get dir async {
+    final d = await getApplicationDocumentsDirectory();
+    final folder = Directory('${d.path}/horizon');
+
+    if (!await folder.exists()) {
+      await folder.create(recursive: true);
     }
+
+    return folder;
   }
 
-  void increment() {
+  Future<void> loadImages() async {
+    final folder = await dir;
+    final files = folder.listSync().whereType<File>().toList();
+
     setState(() {
-      count++;
+      images = files;
     });
   }
 
-  void decrement() {
-    setState(() {
-      count--;
-    });
+  Future<void> pick(ImageSource source) async {
+    final XFile? x =
+        await picker.pickImage(
+      source: source,
+      imageQuality: 90,
+    );
+
+    if (x == null) return;
+
+    final folder = await dir;
+
+    final file = await File(x.path).copy(
+      '${folder.path}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
+
+    images.insert(0, file);
+
+    setState(() {});
   }
 
-  void reset() {
-    setState(() {
-      count = 0;
-    });
+  Future<void> remove(File f) async {
+    await f.delete();
+    loadImages();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Counter App"),
+        title: const Text('Horizon Professional'),
         centerTitle: true,
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (imageFile != null)
-                CircleAvatar(
-                  radius: 60,
-                  backgroundImage: FileImage(imageFile!),
-                )
-              else
-                const CircleAvatar(
-                  radius: 60,
-                  child: Icon(Icons.person, size: 60),
-                ),
-
-              const SizedBox(height: 20),
-
-              Text(
-                "$count",
-                style: const TextStyle(
-                  fontSize: 50,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: decrement,
-                    child: const Text("-"),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: increment,
-                    child: const Text("+"),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              ElevatedButton(
-                onPressed: reset,
-                child: const Text("Reset"),
-              ),
-
-              const SizedBox(height: 20),
-
-              ElevatedButton(
-                onPressed: () =>
-                    pickImage(ImageSource.camera),
-                child: const Text("Camera"),
-              ),
-
-              const SizedBox(height: 10),
-
-              ElevatedButton(
-                onPressed: () =>
-                    pickImage(ImageSource.gallery),
-                child: const Text("Gallery"),
-              ),
-            ],
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.search),
           ),
-        ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.lock),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.cloud_upload),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.settings),
+          ),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: '1',
+            onPressed: () => pick(ImageSource.camera),
+            child: const Icon(Icons.camera_alt),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: '2',
+            onPressed: () => pick(ImageSource.gallery),
+            child: const Icon(Icons.photo),
+          ),
+        ],
+      ),
+      body: images.isEmpty
+          ? const Center(
+              child: Text(
+                'No Images Uploaded • Final APK Edition Ready',
+              ),
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: images.length,
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemBuilder: (context, i) {
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ViewPage(file: images[i]),
+                      ),
+                    );
+                  },
+                  onLongPress: () => remove(images[i]),
+                  child: ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(18),
+                    child: Image.file(
+                      images[i],
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class ViewPage extends StatelessWidget {
+  final File file;
+
+  const ViewPage({
+    super.key,
+    required this.file,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(),
+      body: Center(
+        child: Image.file(file),
       ),
     );
   }
