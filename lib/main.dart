@@ -1,76 +1,131 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const HorizonApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
+class HorizonApp extends StatelessWidget {
+  const HorizonApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'Horizon',
       theme: ThemeData(
-
-        colorScheme: .fromSeed(seedColor: Colors.cyanAccent),
+        colorSchemeSeed: Colors.indigo,
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter CounterApp'),
+      home: const HomePage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-
-
-  final String title;
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _HomePageState extends State<HomePage> {
+  final picker = ImagePicker();
+  List<File> images = [];
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    loadImages();
+  }
+
+  Future<Directory> get folder async {
+    final dir = await getApplicationDocumentsDirectory();
+    final f = Directory("${dir.path}/horizon");
+    if (!await f.exists()) {
+      await f.create(recursive: true);
+    }
+    return f;
+  }
+
+  Future<void> loadImages() async {
+    final f = await folder;
+    final files = f.listSync().whereType<File>().toList();
+
     setState(() {
-
-      _counter++;
+      images = files;
     });
+  }
+
+  Future<void> pickImage(ImageSource source) async {
+    final x = await picker.pickImage(source: source);
+    if (x == null) return;
+
+    final f = await folder;
+
+    await File(x.path).copy(
+      "${f.path}/${DateTime.now().millisecondsSinceEpoch}.jpg",
+    );
+
+    loadImages();
+  }
+
+  Future<void> deleteImage(File file) async {
+    await file.delete();
+    loadImages();
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
-
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-
-        title: Text(widget.title),
+        title: const Text("Horizon"),
+        centerTitle: true,
       ),
-      body: Center(
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: "1",
+            onPressed: () => pickImage(ImageSource.camera),
+            child: const Icon(Icons.camera_alt),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            heroTag: "2",
+            onPressed: () => pickImage(ImageSource.gallery),
+            child: const Icon(Icons.photo),
+          ),
+        ],
+      ),
+      body: images.isEmpty
+          ? const Center(child: Text("No Images"))
+          : GridView.builder(
+              padding: const EdgeInsets.all(10),
+              itemCount: images.length,
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemBuilder: (context, index) {
+                final file = images[index];
 
-        child: Column(
-
-          mainAxisAlignment: .center,
-          children: [
-            const Text('Times Tapped:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+                return GestureDetector(
+                  onLongPress: () => deleteImage(file),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.file(
+                      file,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.touch_app),
-      ),
     );
   }
 }
