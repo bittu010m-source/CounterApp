@@ -32,7 +32,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int count = 0;
   File? imageFile;
-
   final ImagePicker picker = ImagePicker();
 
   Future<void> pickImage(ImageSource source) async {
@@ -46,15 +45,15 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void increase() {
+  void increment() {
     setState(() {
       count++;
     });
   }
 
-  void decrease() {
+  void decrement() {
     setState(() {
-      if (count > 0) count--;
+      count--;
     });
   }
 
@@ -76,28 +75,18 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              imageFile != null
-                  ? CircleAvatar(
-                      radius: 60,
-                      backgroundImage: FileImage(imageFile!),
-                    )
-                  : const CircleAvatar(
-                      radius: 60,
-                      child: Icon(Icons.person, size: 60),
-                    ),
+              if (imageFile != null)
+                CircleAvatar(
+                  radius: 60,
+                  backgroundImage: FileImage(imageFile!),
+                )
+              else
+                const CircleAvatar(
+                  radius: 60,
+                  child: Icon(Icons.person, size: 60),
+                ),
+
               const SizedBox(height: 20),
-
-              ElevatedButton(
-                onPressed: () => pickImage(ImageSource.gallery),
-                child: const Text("Pick from Gallery"),
-              ),
-
-              ElevatedButton(
-                onPressed: () => pickImage(ImageSource.camera),
-                child: const Text("Open Camera"),
-              ),
-
-              const SizedBox(height: 30),
 
               Text(
                 "$count",
@@ -110,25 +99,42 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 20),
 
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
                 children: [
                   ElevatedButton(
-                    onPressed: decrease,
+                    onPressed: decrement,
                     child: const Text("-"),
                   ),
-                  const SizedBox(width: 20),
+                  const SizedBox(width: 10),
                   ElevatedButton(
-                    onPressed: increase,
+                    onPressed: increment,
                     child: const Text("+"),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
               ElevatedButton(
                 onPressed: reset,
                 child: const Text("Reset"),
+              ),
+
+              const SizedBox(height: 20),
+
+              ElevatedButton(
+                onPressed: () =>
+                    pickImage(ImageSource.camera),
+                child: const Text("Camera"),
+              ),
+
+              const SizedBox(height: 10),
+
+              ElevatedButton(
+                onPressed: () =>
+                    pickImage(ImageSource.gallery),
+                child: const Text("Gallery"),
               ),
             ],
           ),
