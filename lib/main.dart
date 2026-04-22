@@ -1,23 +1,21 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 
 void main() {
-  runApp(const HorizonApp());
+  runApp(const MyApp());
 }
 
-class HorizonApp extends StatelessWidget {
-  const HorizonApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Horizon',
+      title: 'Counter App',
       theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        useMaterial3: true,
+        primarySwatch: Colors.blue,
       ),
       home: const HomePage(),
     );
@@ -32,100 +30,110 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final picker = ImagePicker();
-  List<File> images = [];
+  int count = 0;
+  File? imageFile;
 
-  @override
-  void initState() {
-    super.initState();
-    loadImages();
-  }
+  final ImagePicker picker = ImagePicker();
 
-  Future<Directory> get folder async {
-    final dir = await getApplicationDocumentsDirectory();
-    final f = Directory("${dir.path}/horizon");
-    if (!await f.exists()) {
-      await f.create(recursive: true);
+  Future<void> pickImage(ImageSource source) async {
+    final XFile? pickedFile =
+        await picker.pickImage(source: source);
+
+    if (pickedFile != null) {
+      setState(() {
+        imageFile = File(pickedFile.path);
+      });
     }
-    return f;
   }
 
-  Future<void> loadImages() async {
-    final f = await folder;
-    final files = f.listSync().whereType<File>().toList();
-
+  void increase() {
     setState(() {
-      images = files;
+      count++;
     });
   }
 
-  Future<void> pickImage(ImageSource source) async {
-    final x = await picker.pickImage(source: source);
-    if (x == null) return;
-
-    final f = await folder;
-
-    await File(x.path).copy(
-      "${f.path}/${DateTime.now().millisecondsSinceEpoch}.jpg",
-    );
-
-    loadImages();
+  void decrease() {
+    setState(() {
+      if (count > 0) count--;
+    });
   }
 
-  Future<void> deleteImage(File file) async {
-    await file.delete();
-    loadImages();
+  void reset() {
+    setState(() {
+      count = 0;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Horizon"),
+        title: const Text("Counter App"),
         centerTitle: true,
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton(
-            heroTag: "1",
-            onPressed: () => pickImage(ImageSource.camera),
-            child: const Icon(Icons.camera_alt),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: "2",
-            onPressed: () => pickImage(ImageSource.gallery),
-            child: const Icon(Icons.photo),
-          ),
-        ],
-      ),
-      body: images.isEmpty
-          ? const Center(child: Text("No Images"))
-          : GridView.builder(
-              padding: const EdgeInsets.all(10),
-              itemCount: images.length,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemBuilder: (context, index) {
-                final file = images[index];
-
-                return GestureDetector(
-                  onLongPress: () => deleteImage(file),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.file(
-                      file,
-                      fit: BoxFit.cover,
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              imageFile != null
+                  ? CircleAvatar(
+                      radius: 60,
+                      backgroundImage: FileImage(imageFile!),
+                    )
+                  : const CircleAvatar(
+                      radius: 60,
+                      child: Icon(Icons.person, size: 60),
                     ),
+              const SizedBox(height: 20),
+
+              ElevatedButton(
+                onPressed: () => pickImage(ImageSource.gallery),
+                child: const Text("Pick from Gallery"),
+              ),
+
+              ElevatedButton(
+                onPressed: () => pickImage(ImageSource.camera),
+                child: const Text("Open Camera"),
+              ),
+
+              const SizedBox(height: 30),
+
+              Text(
+                "$count",
+                style: const TextStyle(
+                  fontSize: 50,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: decrease,
+                    child: const Text("-"),
                   ),
-                );
-              },
-            ),
+                  const SizedBox(width: 20),
+                  ElevatedButton(
+                    onPressed: increase,
+                    child: const Text("+"),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              ElevatedButton(
+                onPressed: reset,
+                child: const Text("Reset"),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
